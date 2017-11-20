@@ -168,11 +168,10 @@ m <- lm(data = d, loghomeRange_km2 ~ logBody_mass_female_mean)
   model_results<-cbind.data.frame(names, m$coefficients, ... = St_Error_model, CI_m)
   bootstrap_results<-cbind.data.frame(Beta_estimate,se_bind, CI_bind)
   total_results<-cbind.data.frame(model_results, bootstrap_results)
-return(tota_results)    
+return(total_results)    
 }
-
 ```
-# and mean beta coefficient estimates,
+
 
 #EXTRA EXTRA CREDIT: + 1
 ```{r}
