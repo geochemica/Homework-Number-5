@@ -171,11 +171,3 @@ m <- lm(data = d, loghomeRange_km2 ~ logBody_mass_female_mean)
 return(total_results)    
 }
 ```
-
-
-#EXTRA EXTRA CREDIT: + 1
-```{r}
-
-```
-
-#Graph each beta value from the linear model and its corresponding mean value, lower CI and upper CI from a bootstrap as a function of number of bootstraps from 10 to 200 by 10s. HINT: the beta value from the linear model will be the same for all bootstraps and the mean beta value may not differ that much!
