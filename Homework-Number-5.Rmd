@@ -1,0 +1,143 @@
+---
+title: "Homework-Number-5"
+author: "Arora"
+date: "November 18, 2017"
+output: html_document
+---
+#####Notes: so this is going to go through every step that I went through to finally get to code which worked.The code which worked for the second question begins in chunk 8. 
+```{r}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+```{r}
+#this is from module 13
+d$loghomeRange_km2 <- log(d$HomeRange_km2)
+d$logBody_mass_female_mean <- log(d$Body_mass_female_mean)
+plot(data = d, loghomeRange_km2 ~ logBody_mass_female_mean)
+```
+```{r}
+#again module 13
+m <- lm(data = d, loghomeRange_km2 ~ logBody_mass_female_mean)
+summary(m)
+```
+```{r}
+names(m)
+```
+```{r}
+m$coefficients
+#the intercept is -9.44123 and the slope is  1.03643
+#I think its weird that the intercept is negative but when it gets plotted the other way around there is still a negative log value for the log home range. If the model is run the other way around the intercept is positive. I'm really not sure how to argue what would be the independent versus dependent variables but I supppose it makes more sense for body mass to be the independent rather than the home range but I"m not sure.
+g <- lm(data = d, logBody_mass_female_mean ~ loghomeRange_km2)
+g$coefficients
+#the intercept for g is 8.486157  and the slope is 0.506380 
+```
+```{r}
+#NOTE: this did not work
+k <- 1000  # number of samples
+s <- NULL  # dummy variable to hold each sample
+for (i in 1:k) {
+    s[[i]] <- lm(data = d, loghomeRange_km2 ~ logBody_mass_female_mean)
+}
+#this however does not actually give me the results I want because I cannot manipulate the data from here because I cannot get the values from each of the 1000 runs of the model (instead there are residuals, effects, and fitted values but I want the values from the model) and because I don't think this is actually bootstrapping (this one samples the entire dataset in stead of just a portion of the dataset)
+
+#instead adding the n back in should make this a bootstrap
+k <- 1000  # number of samples
+n <- 50  # size of each sample
+s <- NULL  # dummy variable to hold each sample
+for (i in 1:k) {
+    s[[i]] <- sample(lm(data = d, loghomeRange_km2 ~ logBody_mass_female_mean), size = n, replace = TRUE)
+}
+
+s[[i]]$qr
+```
+```{r}
+generate_data <- function(nsamples=100) {
+  x <-logBody_mass_female_mean
+  y <-loghomeRange_km2
+  data.frame(x,y)
+}
+sampling <- raply(1000, function() {
+  coef(lm(loghomeRange_km2 ~ logBody_mass_female_mean, data=d))
+})
+aaply(sampling, 2, sd)
+#this should give the standard deviations for these two however I am not getting this to work
+#so I'll move on
+```
+
+
+
+```{r}
+#Let's try this instead
+# Bootstrap 95% CI for regression coefficients 
+library(boot)
+# function to obtain regression weights 
+bs = function(data=d, indices, formula=lm(loghomeRange_km2 ~ logBody_mass_female_mean)) {
+    d = data[indices,] # allows boot to select sample 
+    fit = lm(loghomeRange_km2 ~ logBody_mass_female_mean, data=d)
+    return(coef(fit))
+}
+# bootstrapping with 1000 replications 
+results = boot(
+    data=d, 
+    statistic=bs, 
+    R=1000, 
+    formula=lm(loghomeRange_km2 ~ logBody_mass_female_mean))
+```
+```{r}
+results$t0
+#
+```
+```{r}
+plot(results, index=1)
+plot(results, index =2)
+#I don't think this chart is strictly necessary 
+```
+#Estimate the standard error for each of your β coefficients as the standard deviation of the sampling distribution from your bootstrap and determine the 95% CI for each of your β coefficients based on the appropriate quantiles from your sampling distribution.
+
+```{r}
+#in module 8 the following code was used to estimate the SE from the sample distribution
+#stdev <- NULL for (i in 1:k) {
+    #stdev[i] <- sd(s[[i]])}
+#sem <- stdev/sqrt(n)  # a vector of SEs estimated from each sample 
+#mean(sem)
+
+
+#I'll use this instead
+sd(results$t[,1])
+#this is for the intercept and is 0.626671
+sd(results$t[,2])
+#this is 0.08000663
+```
+```{r}
+#again using the Book of R (the code above is the code from the Book of R), the confidence interval from the bootstrap can be calculated using:
+
+boot.ci(results, type="bca", index=1) # intercept 
+#for the intercept the confidence interval is between  -10.554 -  -8.3387 
+boot.ci(results, type="bca", index=2) # slope 
+#for the slope the confidence interval is between 0.888 - 1.178
+```
+
+#How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+```{r}
+#the standard error estimate from lm() is found under the standard error portion of the summary. For intercept the standard error is 0.67293, and for the slope the standard error is 0.08488 . 
+```
+
+
+#How does the latter compare to the 95% CI estimated from your entire dataset?
+```{r}
+#I think this is asking for the comparison of the CI from the bootstrap versus a CI calculated from lm(). To get the CI from lm() use confint. 
+CI_m<-confint(m)
+CI_m
+#For the Intercept the CI is between -10.7720889 - -8.110374. For the Slope the confidence interval is between 0.8685707 - 1.204292. 
+```
+
+
+#EXTRA CREDIT: + 2
+
+#Write a FUNCTION that takes as its arguments a dataframe, “d”, a linear model, “m” (as a character string, e.g., “logHR~logBM”), a user-defined confidence interval level, “conf.level” (with default = 0.95), and a number of bootstrap replicates, “n” (with default = 1000). Your function should return a dataframe that includes: beta coefficient names; beta coefficients, standard errors, and upper and lower CI limits for the linear model based on your entire dataset; and mean beta coefficient estimates, SEs, and CI limits for those coefficients based on your bootstrap.
+
+#EXTRA EXTRA CREDIT: + 1
+
+#Graph each beta value from the linear model and its corresponding mean value, lower CI and upper CI from a bootstrap as a function of number of bootstraps from 10 to 200 by 10s. HINT: the beta value from the linear model will be the same for all bootstraps and the mean beta value may not differ that much!
